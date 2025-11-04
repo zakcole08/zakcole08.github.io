@@ -1,0 +1,41 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>zakcole08 — experiments & tools</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <header>
+    <h1>zakcole08 — experiments & tools</h1>
+    <p>Small, easy-to-manage demos showing coding experiments.</p>
+    <nav><a href="index.html">Home</a> · <a href="tools/json.html">JSON Formatter</a> · <a href="tools/clock.html">Live Clock</a></nav>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>About</h2>
+      <p>Welcome  this is a minimal GitHub Pages user site. Each tool is a single static HTML/JS file so it's easy to edit and extend.</p>
+    </section>
+
+    <section class="card">
+      <h2>Featured Tools</h2>
+      <ul>
+        <li><a href="tools/json.html">JSON Formatter</a>  paste JSON then prettify/validate it client-side.</li>
+        <li><a href="tools/clock.html">Live Clock</a> — small demo of DOM + JS animation.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Get the code</h2>
+      <p>This repo is intended to be the user site <strong>zakcole08.github.io</strong>. Edit files locally and push to the repo to publish updates.</p>
+    </section>
+  </main>
+
+  <footer>
+    <p>Generated: <span id="ts"></span> · <a href="https://github.com/zakcole08/zakcole08.github.io">source</a></p>
+    <script>document.getElementById('ts').textContent = new Date().toLocaleString();</script>
+  </footer>
+</body>
+</html>

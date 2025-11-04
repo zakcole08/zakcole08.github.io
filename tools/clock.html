@@ -1,0 +1,22 @@
+﻿<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><title>Live Clock  zakcole08</title>
+<link rel="stylesheet" href="../assets/style.css" />
+<style>.clock{font-family:Consolas,monospace;font-size:3rem;text-align:center;padding:2rem}</style>
+</head>
+<body>
+  <header style="padding:1rem"><a href="../index.html">← back</a></header>
+  <main style="max-width:980px;margin:0 auto;padding:1rem">
+    <div class="card">
+      <h2>Live Clock</h2>
+      <div class="clock" id="c">--:--:--</div>
+      <p>Simple client-side demo (JS + DOM).</p>
+    </div>
+  </main>
+  <script>
+    function pad(n){return n.toString().padStart(2,'0')}
+    function tick(){ const d=new Date(); document.getElementById('c').textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}` }
+    tick(); setInterval(tick,1000)
+  </script>
+</body>
+</html>
