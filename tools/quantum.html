@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Quantum demo — zakcole08</title>
+<style>
+  /* Retro purple theme */
+  html,body{height:100%;margin:0;background:radial-gradient(ellipse at top left,#2b0036 0%,#09000a 60%);font-family:ui-monospace,"Roboto Mono",monospace;color:#efe6ff}
+  .wrap{max-width:980px;margin:20px auto;padding:12px}
+  .panel{background:linear-gradient(180deg, rgba(64,6,48,0.9), rgba(18,4,20,0.9));border-radius:10px;padding:16px;box-shadow:0 8px 30px rgba(7,2,20,0.7);border:1px solid rgba(255,255,255,0.03)}
+  h1{color:#ff9aff;margin:0 0 8px 0}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  .col{flex:1;min-width:260px}
+  button, select, input{background:transparent;border:1px solid rgba(255,255,255,0.06);color:#ffd7ff;padding:6px 8px;border-radius:8px}
+  button:hover{background:rgba(255,255,255,0.02);cursor:pointer}
+  label{display:block;margin:8px 0 4px;color:#d7bffb;font-size:13px}
+  pre{background:rgba(255,255,255,0.02);padding:8px;border-radius:6px;overflow:auto;color:#efe6ff}
+  table{width:100%;border-collapse:collapse}
+  td,th{padding:6px 8px;border-top:1px solid rgba(255,255,255,0.02);text-align:left}
+  .muted{color:#cfc0ff;font-size:13px}
+  .chip{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,0.02);color:#ffd7ff}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="panel">
+      <h1>Quantum demo</h1>
+      <div class="muted">Tiny interactive simulator — 1-2 qubits, Hadamard, X, CNOT, measure & sample</div>
+
+      <div style="margin-top:12px" class="row">
+        <div class="col">
+          <label>Qubits</label>
+          <select id="nq">
+            <option value="1">1 qubit</option>
+            <option value="2" selected>2 qubits</option>
+          </select>
+
+          <label>Preset circuit</label>
+          <select id="preset">
+            <option value="superposition">Single qubit — superposition (H)</option>
+            <option value="bell" selected>Bell state (H on q0, CNOT 0→1)</option>
+            <option value="x_then_h">X then H</option>
+            <option value="custom">Start empty (build below)</option>
+          </select>
+
+          <label style="margin-top:10px">Custom gates (applied in order)</label>
+          <div class="muted">For 2-qubit circuits you can use: H q0, H q1, X q0, X q1, CNOT 0 1, CNOT 1 0</div>
+          <textarea id="custom" rows="4" style="width:100%;background:transparent;border:1px solid rgba(255,255,255,0.03);color:inherit;padding:8px;border-radius:6px;margin-top:8px">H q0
+CNOT 0 1</textarea>
+
+          <div style="margin-top:10px">
+            <button id="run">Run circuit</button>
+            <button id="reset">Reset state</button>
+          </div>
+
+          <label style="margin-top:12px">Shots (for sampling)</label>
+          <input id="shots" type="number" value="1000" min="1" style="width:120px"/>
+
+          <div style="margin-top:12px" class="muted">Tip: pick "Bell state" then Run — you'll see probabilities 50/50 for |00> and |11>, and sampling matches that.</div>
+        </div>
+
+        <div class="col">
+          <label>State vector (amplitudes)</label>
+          <pre id="amplitudes">—</pre>
+
+          <label>Probabilities</label>
+          <div id="probs"></div>
+
+          <label style="margin-top:8px">Sampling results</label>
+          <pre id="counts">—</pre>
+        </div>
+      </div>
+
+      <hr style="border:none;border-top:1px solid rgba(255,255,255,0.02);margin:12px 0" />
+
+      <div class="muted">How it works: the page keeps a small state vector (size 2^n), applies simple gate matrices (H, X, CNOT) and computes probabilities. This is educational — not a real quantum backend.</div>
+    </div>
+  </div>
+
+<script>
+/*
+ Simple 1-2 qubit simulator.
+ - State is an array of complex numbers {re,im}
+ - Supports 1-qubit gates (X, H) and 2-qubit CNOT
+ - Measurement sampling via probabilities
+*/
+
+// complex helpers (small)
+function c(re,im=0){ return {re:re, im:im}; }
+function add(a,b){ return c(a.re+b.re, a.im+b.im); }
+function mul(a,b){ return c(a.re*b.re - a.im*b.im, a.re*b.im + a.im*b.re); }
+function scale(a,k){ return c(a.re*k, a.im*k); }
+function mag2(a){ return a.re*a.re + a.im*a.im; }
+
+// basic gates as 2x2 complex matrices
+const GATES = {
+  X: [[c(0), c(1)], [c(1), c(0)]],
+  H: (1/Math.sqrt(2)) * 1 // we'll treat H specially to avoid complex matrix multiply overhead
+};
+
+// initialize state vector for n qubits
+function zeroState(n){
+  const size = 1<<n;
+  const s = new Array(size);
+  for(let i=0;i<size;i++) s[i] = c(0,0);
+  s[0] = c(1,0);
+  return s;
+}
+
+// apply single-qubit gate (2x2 real/complex) to target qubit index
+function applySingleQubit(state, n, target, matrixName){
+  const size = 1<<n;
+  if(matrixName === 'H'){
+    // H is real 1/sqrt(2) * [[1,1],[1,-1]]
+    const k = 1/Math.sqrt(2);
+    // for each pair where target bit differs
+    for(let i=0;i<size;i++){
+      // only process pairs where bit target is 0 (so we don't double apply)
+      if(((i>>target)&1)===0){
+        const j = i | (1<<target);
+        const a = state[i], b = state[j];
+        // new values
+        state[i] = c(k*(a.re + b.re), k*(a.im + b.im));
+        state[j] = c(k*(a.re - b.re), k*(a.im - b.im));
+      }
+    }
+    return;
+  }
+  if(matrixName === 'X'){
+    // swap amplitudes where target bit differs
+    for(let i=0;i<size;i++){
+      if(((i>>target)&1)===0){
+        const j = i | (1<<target);
+        const tmp = state[i];
+        state[i] = state[j];
+        state[j] = tmp;
+      }
+    }
+    return;
+  }
+  // fallback: if you add complex matrices later, implement here
+}
+
+// apply CNOT control -> target (both indexes)
+function applyCNOT(state, n, control, target){
+  const size = 1<<n;
+  for(let i=0;i<size;i++){
+    if( ((i>>control)&1)===1 && ((i>>target)&1)===0 ){
+      const j = i | (1<<target);
+      // swap i and j
+      const tmp = state[i];
+      state[i] = state[j];
+      state[j] = tmp;
+    }
+  }
+}
+
+// compute probabilities array
+function probabilities(state){
+  return state.map(s => mag2(s));
+}
+
+// pretty-print amplitude complex numbers
+function fmtComplex(z){
+  const re = Number(z.re.toFixed(6));
+  const im = Number(z.im.toFixed(6));
+  if(Math.abs(im) < 1e-8) return String(re);
+  return `${re}${im >=0 ? '+' : ''}${im}i`;
+}
+
+// format basis label for n qubits
+function basisLabel(n, idx){
+  return '|' + idx.toString(2).padStart(n,'0') + '>';
+}
+
+// run shots (sampling according to probabilities)
+function sampleCounts(probs, shots){
+  const cum = [];
+  let s = 0;
+  for(let p of probs){ s += p; cum.push(s); }
+  const counts = new Array(probs.length).fill(0);
+  for(let k=0;k<shots;k++){
+    const r = Math.random() * s;
+    let i = 0;
+    while(r > cum[i]) i++;
+    counts[i]++;
+  }
+  return counts;
+}
+
+// UI wiring
+const nqEl = document.getElementById('nq');
+const presetEl = document.getElementById('preset');
+const customEl = document.getElementById('custom');
+const runBtn = document.getElementById('run');
+const resetBtn = document.getElementById('reset');
+const shotsEl = document.getElementById('shots');
+const ampsEl = document.getElementById('amplitudes');
+const probsEl = document.getElementById('probs');
+const countsEl = document.getElementById('counts');
+
+let n = Number(nqEl.value);
+let state = zeroState(n);
+
+// helper to apply a list of simple commands like ["H q0", "CNOT 0 1"]
+function applyCommands(state, n, cmds){
+  for(const line of cmds){
+    const s = line.trim();
+    if(!s) continue;
+    const parts = s.split(/\s+/);
+    const cmd = parts[0].toUpperCase();
+    if(cmd === 'H'){
+      const q = Number(parts[1].replace('q',''));
+      applySingleQubit(state, n, q, 'H');
+    } else if(cmd === 'X'){
+      const q = Number(parts[1].replace('q',''));
+      applySingleQubit(state, n, q, 'X');
+    } else if(cmd === 'CNOT'){
+      const control = Number(parts[1]);
+      const target = Number(parts[2]);
+      applyCNOT(state, n, control, target);
+    } else {
+      // unknown: ignore
+    }
+  }
+}
+
+// set preset circuits
+function loadPreset(name){
+  if(name === 'superposition'){
+    nqEl.value = '1';
+    n = 1;
+    state = zeroState(n);
+    customEl.value = 'H q0';
+  } else if(name === 'bell'){
+    nqEl.value = '2';
+    n = 2;
+    state = zeroState(n);
+    customEl.value = 'H q0\nCNOT 0 1';
+  } else if(name === 'x_then_h'){
+    nqEl.value = '1';
+    n = 1;
+    state = zeroState(n);
+    customEl.value = 'X q0\nH q0';
+  } else if(name === 'custom'){
+    // keep whatever current nq and custom text
+  }
+  renderState();
+}
+
+// run circuit: parse custom text and apply gates in order on a fresh zero state
+async function runCircuit(){
+  n = Number(nqEl.value);
+  state = zeroState(n);
+  const lines = customEl.value.split('\n').map(l=>l.trim()).filter(Boolean);
+  applyCommands(state, n, lines);
+  renderState();
+  // do sampling if shots > 0
+  const shots = Math.max(0, Number(shotsEl.value) || 0);
+  if(shots > 0){
+    const probs = probabilities(state);
+    const counts = sampleCounts(probs, shots);
+    const out = counts.map((c,i) => `${basisLabel(n,i)} : ${c}`).join('\n');
+    countsEl.textContent = out;
+  } else {
+    countsEl.textContent = '(no shots)';
+  }
+}
+
+// update DOM with amplitudes and probabilities
+function renderState(){
+  const amps = state.map(s => fmtComplex(s));
+  const prob = probabilities(state);
+  // amplitudes
+  let ampText = '';
+  for(let i=0;i<amps.length;i++){
+    ampText += `${basisLabel(n,i)} : ${amps[i]}\n`;
+  }
+  ampsEl.textContent = ampText.trim();
+  // probabilities table
+  let html = '<table><thead><tr><th>State</th><th>Probability</th></tr></thead><tbody>';
+  for(let i=0;i<prob.length;i++){
+    html += `<tr><td>${basisLabel(n,i)}</td><td>${(prob[i]*100).toFixed(2)}%</td></tr>`;
+  }
+  html += '</tbody></table>';
+  probsEl.innerHTML = html;
+}
+
+// reset state to |0...0>
+function resetState(){
+  n = Number(nqEl.value);
+  state = zeroState(n);
+  renderState();
+  countsEl.textContent = '(no shots)';
+}
+
+// event hookups
+presetEl.addEventListener('change', ()=> loadPreset(presetEl.value));
+nqEl.addEventListener('change', ()=> { n = Number(nqEl.value); state = zeroState(n); renderState(); });
+runBtn.addEventListener('click', runCircuit);
+resetBtn.addEventListener('click', resetState);
+
+// initial render
+loadPreset(presetEl.value);
+</script>
+</body>
+</html>

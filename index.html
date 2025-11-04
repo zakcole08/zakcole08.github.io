@@ -3,39 +3,50 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>zakcole08 — experiments & tools</title>
+  <title>zakcole08  Experimental Tools & Portfolio</title>
   <link rel="stylesheet" href="assets/style.css" />
 </head>
-<body>
-  <header>
-    <h1>zakcole08 — experiments & tools</h1>
-    <p>Small, easy-to-manage demos showing coding experiments.</p>
-    <nav><a href="index.html">Home</a> · <a href="tools/json.html">JSON Formatter</a> · <a href="tools/clock.html">Live Clock</a></nav>
-  </header>
+<body class="theme-neo">
+  <div class="wrap">
+    <header class="hero">
+      <div class="hero-inner">
+        <h1 class="name">Zak Cole</h1>
+        <p class="cta">
+          <a class="btn ghost" href="https://github.com/zakcole08" target="_blank" rel="noopener">View GitHub</a>
+        </p>
+      </div>
+      <svg class="hero-shape" viewBox="0 0 800 200" preserveAspectRatio="none" aria-hidden>
+        <defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#7ef1ff"/><stop offset="1" stop-color="#8a7bff"/></linearGradient></defs>
+        <path d="M0,120 C150,200 350,40 800,140 L800 200 L0 200 Z" fill="url(#g)" opacity="0.12"/>
+      </svg>
+    </header>
 
-  <main>
-    <section class="card">
-      <h2>About</h2>
-      <p>Welcome  this is a minimal GitHub Pages user site. Each tool is a single static HTML/JS file so it's easy to edit and extend.</p>
-    </section>
+    <main class="container">
+      <section class="card intro">
+        <h2>What I build</h2>
+        <p>I automate, instrument and prototype. I like small, focused tools that solve real ops problems and also demonstrate clean code.</p>
+        <div class="skill-grid">
+          <div class="skill"><strong>Quantum</strong><span>Qiskit, D-wave Leap, Quantum Algorithms</span></div>
+          <div class="skill"><strong>Automation</strong><span>Bash, PowerShell, Golang, C, C#, Python, Rust</span></div>
+          <div class="skill"><strong>Infrastructure</strong><span>Windows, AD, monitoring integrations</span></div>
+          <div class="skill"><strong>Web</strong><span>HTML, JS, CSS</span></div>
+          <div class="skill"><strong>Integration</strong><span>API design, webhooks, data pipelines</span></div>
+          <div class="skill"><strong>Observability</strong><span>Monitoring, metrics, config</span></div>
+        </div>
+      </section>
 
-    <section class="card">
-      <h2>Featured Tools</h2>
-      <ul>
-        <li><a href="tools/json.html">JSON Formatter</a>  paste JSON then prettify/validate it client-side.</li>
-        <li><a href="tools/clock.html">Live Clock</a> — small demo of DOM + JS animation.</li>
-      </ul>
-    </section>
+      <section class="card actions">
+        <h2>Try live</h2>
+        <p>Open the terminal demo to see an in-browser terminal</p>
+        <p><a class="btn" href="tools/terminal.html">Launch Terminal Demo</a></p>
+        <p>Open the quantum demo to see a quantum circuit simulator</p>
+        <p><a class="btn" href="tools/quantum.html">Launch Quantum Demo</a></p>
+      </section>
+    </main>
 
-    <section class="card">
-      <h2>Get the code</h2>
-      <p>This repo is intended to be the user site <strong>zakcole08.github.io</strong>. Edit files locally and push to the repo to publish updates.</p>
-    </section>
-  </main>
-
-  <footer>
-    <p>Generated: <span id="ts"></span> · <a href="https://github.com/zakcole08/zakcole08.github.io">source</a></p>
-    <script>document.getElementById('ts').textContent = new Date().toLocaleString();</script>
-  </footer>
+    <footer class="sitefoot">
+      <div>zakcole08 • <a href="https://zhomelab.uk">zhomelab.uk</a> • <a href="https://github.com/zakcole08">GitHub</a></div>
+    </footer>
+  </div>
 </body>
 </html>

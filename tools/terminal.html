@@ -1,0 +1,289 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Terminal — zakcole08</title>
+<style>
+  /* Retro purple theme */
+  html,body{height:100%;margin:0;background:radial-gradient(ellipse at top left,#2b0036 0%,#09000a 60%);font-family:ui-monospace, "Roboto Mono", monospace;color:#efe6ff}
+  .wrap{max-width:980px;margin:20px auto;padding:12px}
+  .panel{background:linear-gradient(180deg, rgba(64,6,48,0.9), rgba(18,4,20,0.9));border-radius:10px;padding:14px;min-height:360px;display:flex;flex-direction:column;box-shadow:0 8px 30px rgba(7,2,20,0.7);border:1px solid rgba(255,255,255,0.03)}
+  #out{flex:1;overflow:auto;padding:10px 8px;font-size:14px;white-space:pre-wrap}
+  .meta{color:#cfc0ff;margin-bottom:8px;display:flex;justify-content:space-between;font-size:13px}
+  .prompt-row{display:flex;gap:6px;align-items:flex-start;margin:2px 0}
+  .prompt{color:#ff6aff;flex:0 0 auto;white-space:nowrap;font-weight:700;margin-right:6px}
+  input.cmd{flex:1;background:transparent;border:0;color:inherit;font:inherit;padding:2px 0 4px 0;outline:none}
+  .out{color:#e9e1ff;margin:6px 0}
+  .btns{margin-top:10px;display:flex;gap:8px}
+  button{background:transparent;border:1px solid rgba(255,255,255,0.04);color:#dfc0ff;padding:6px 10px;border-radius:8px;cursor:pointer}
+  button:hover{background:rgba(255,255,255,0.02)}
+  code{background:rgba(255,255,255,0.03);padding:.04rem .22rem;border-radius:6px;color:#ffd7ff}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div><strong style="color:#ff9aff">zakcole08</strong> <span style="color:#d7bffb;font-size:13px">terminal demo</span></div>
+      <a style="color:#ffd7ff;text-decoration:none" href="../index.html">Back</a>
+    </div>
+
+    <section class="panel" aria-label="Terminal">
+      <div class="meta"><span>Type <code>help</code></span><span id="status">Ready</span></div>
+      <div id="out" aria-live="polite"></div>
+      <div class="btns">
+        <button id="copy">Copy output</button>
+        <button id="clear">Clear</button>
+      </div>
+    </section>
+  </div>
+
+<script>
+(() => {
+  const out = document.getElementById('out');
+  const copyBtn = document.getElementById('copy');
+  const clearBtn = document.getElementById('clear');
+
+  // command handlers
+  const COMMANDS = {
+    help: () => [
+      'Available commands:',
+      'help         show this help',
+      'echo         echo text',
+      'contact      show contact info',
+      'calc         evaluate simple arithmetic',
+      'guess        number guessing game',
+      'rps          rock-paper-scissors',
+      'todo         todo add/list/done/clear',
+      'fortune      random quote',
+      'portscan     quick ports check',
+      'save         save terminal output to file',
+      'clear        clear terminal'
+    ],
+
+    // echo prints whatever follows the command
+    echo: raw => raw.split(/\s+/).slice(1).join(' ') || '',
+
+    // contact info
+    contact: [
+      'GitHub: https://github.com/zakcole08',
+      'Email:  zak.cole08@gmail.com'
+    ],
+
+    // calc: small arithmetic. Only numbers and operators allowed.
+    calc: raw => {
+      const expr = raw.split(/\s+/).slice(1).join(' ');
+      if(!expr) return 'Usage: calc 1+2*(3/4)';
+      if(/[^0-9+\-*/().\s]/.test(expr)) return 'Invalid characters in expression';
+      try { return String(Function('"use strict";return ('+expr+')')()); }
+      catch(e){ return 'Error evaluating expression'; }
+    },
+
+    // guess: small per-tab game. Usage: "guess 42"
+    _guessState: {}, // internal storage for the game
+
+    guess: raw => {
+      const parts = raw.split(/\s+/);
+      const val = parts[1];
+      const key = 'default';
+      // start a new game if needed
+      if(!COMMANDS._guessState[key]) COMMANDS._guessState[key] = { target: Math.floor(Math.random()*100)+1, tries:0 };
+      const s = COMMANDS._guessState[key];
+      if(!val) return 'Usage: guess <number>';
+      const n = parseInt(val,10);
+      if(Number.isNaN(n)) return 'Not a number';
+      s.tries++;
+      if(n === s.target){ COMMANDS._guessState[key] = null; return `Correct! ${n} in ${s.tries} tries. New game will start next prompt.`; }
+      return n < s.target ? 'Too low' : 'Too high';
+    },
+
+    // rock-paper-scissors
+    rps: raw => {
+      const arg = raw.split(/\s+/)[1];
+      const opts = ['rock','paper','scissors'];
+      if(!arg) return 'Usage: rps rock|paper|scissors';
+      const you = arg.toLowerCase();
+      if(!opts.includes(you)) return 'Pick rock, paper, or scissors';
+      const me = opts[Math.floor(Math.random()*3)];
+      if(you===me) return `Tie — we both chose ${me}`;
+      if((you==='rock'&&me==='scissors')||(you==='paper'&&me==='rock')||(you==='scissors'&&me==='paper')) return `You win — I chose ${me}`;
+      return `You lose — I chose ${me}`;
+    },
+
+    // simple TODO list stored in your browser
+    todo: raw => {
+      const parts = raw.split(/\s+/).slice(1);
+      const cmd = parts[0];
+      const storeKey = 'term_todo_v1';
+      const tasks = JSON.parse(localStorage.getItem(storeKey) || '[]');
+      if(cmd === 'add'){ const text = parts.slice(1).join(' '); if(!text) return 'Usage: todo add <task>'; tasks.push(text); localStorage.setItem(storeKey, JSON.stringify(tasks)); return 'Added'; }
+      if(cmd === 'list') return tasks.length ? tasks.map((t,i)=>`${i+1}. ${t}`) : 'No tasks';
+      if(cmd === 'done'){ const idx = parseInt(parts[1],10)-1; if(isNaN(idx)||idx<0||idx>=tasks.length) return 'Invalid index'; tasks.splice(idx,1); localStorage.setItem(storeKey, JSON.stringify(tasks)); return 'Removed'; }
+      if(cmd === 'clear'){ localStorage.setItem(storeKey, JSON.stringify([])); return 'Cleared'; }
+      return 'Usage: todo add <task> | todo list | todo done <n> | todo clear';
+    },
+
+    // short random quotes
+    fortune: () => {
+      const f = [
+        "Stay hungry. Stay foolish.",
+        "Simplicity is the soul of efficiency.",
+        "Real engineers ship.",
+        "Debugging is like being the detective in a crime movie where you are also the murderer."
+      ];
+      return f[Math.floor(Math.random()*f.length)];
+    },
+
+    // portscan: quick, best-effort checks using browser fetch.
+    // Note: browsers block many cross-site checks, so this is only a basic "does something respond" test.
+    portscan: async raw => {
+      const parts = raw.split(/\s+/);
+      if (parts.length < 2) {
+        return 'Usage: portscan <host> [port1,port2,...] (default ports: 22,80,443,8000,8080)';
+      }
+      const host = parts[1];
+      const ports = (parts[2] || '22,80,443,8000,8080').split(',').map(p=>parseInt(p,10)).filter(Boolean);
+      const results = [];
+      for(const port of ports){
+        const url = `${location.protocol === 'https:' ? 'https' : 'http'}://${host}:${port}/`;
+        try {
+          const ctrl = new AbortController();
+          const id = setTimeout(()=>ctrl.abort(), 1500);
+          // try a HEAD request; in many cases browser security will prevent a true result
+          await fetch(url, { method: 'HEAD', mode: 'no-cors', signal: ctrl.signal });
+          clearTimeout(id);
+          results.push(`${port} — responded (best-effort)`);
+        } catch(e){
+          results.push(`${port} — no response`);
+        }
+      }
+      return results;
+    },
+
+    // save: download terminal output
+    save: () => {
+      const lines = Array.from(document.getElementById('out').childNodes).map(n=>n.textContent.trim()).join('\n');
+      const blob = new Blob([lines], {type:'text/plain'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'terminal-output.txt'; document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      return 'Saved terminal-output.txt';
+    }
+  };
+
+  // scroll helper
+  function scroll() { out.scrollTop = out.scrollHeight; }
+
+  // print output (string or array)
+  function appendOutput(lines){
+    if(lines === undefined || lines === null) return;
+    if(!Array.isArray(lines)) lines = [String(lines)];
+    lines.forEach(l=>{
+      const div = document.createElement('div');
+      div.className = 'out';
+      div.textContent = l;
+      out.appendChild(div);
+    });
+    scroll();
+  }
+
+  // make a new prompt line with a focused input; commit on Enter
+  function newPrompt(){
+    const row = document.createElement('div');
+    row.className = 'prompt-row';
+    const p = document.createElement('span'); p.className='prompt'; p.textContent='zakcole08:~$';
+    const input = document.createElement('input'); input.className='cmd'; input.autocomplete='off'; input.spellcheck=false;
+    row.appendChild(p); row.appendChild(input);
+    out.appendChild(row);
+    input.focus();
+    scroll();
+
+    input.addEventListener('keydown', function onKey(e){
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        input.removeEventListener('keydown', onKey);
+        const v = input.value; // empty is allowed, will just show new prompt
+        // show the entered text (replace the input)
+        const txt = document.createElement('span'); txt.textContent = v; txt.style.whiteSpace='pre-wrap';
+        input.replaceWith(txt);
+        // handle command (can be async)
+        void handleCommand(v);
+      }
+    });
+  }
+
+  // allow async command handlers
+  async function handleCommand(raw){
+    const name = (raw||'').trim().split(/\s+/)[0]?.toLowerCase() || '';
+    if(name === 'clear'){
+      out.innerHTML = '';
+      newPrompt();
+      return;
+    }
+    if(!name){
+      newPrompt();
+      return;
+    }
+    const handler = COMMANDS[name];
+    if(!handler){
+      appendOutput(`Command not found: ${name}. Type "help".`);
+      newPrompt();
+      return;
+    }
+    try {
+      const res = (typeof handler === 'function') ? handler(raw) : handler;
+      const awaited = res instanceof Promise ? await res : res;
+      appendOutput(awaited);
+    } catch (err){
+      appendOutput('Error: ' + (err && err.message ? err.message : String(err)));
+    }
+    newPrompt();
+  }
+
+  // greeting + first prompt
+  appendOutput('Welcome — retro terminal. Type "help".');
+  newPrompt();
+
+  // copy output to clipboard
+  copyBtn.addEventListener('click', async ()=>{
+    const lines = [];
+    out.childNodes.forEach(node=>{
+      if(node.classList && node.classList.contains('prompt-row')){
+        const input = node.querySelector('input');
+        if(input) return;
+        lines.push(node.textContent.trim());
+      } else {
+        lines.push(node.textContent.trim());
+      }
+    });
+    const text = lines.join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+      copyBtn.textContent = 'Copied ✓';
+      setTimeout(()=>copyBtn.textContent='Copy output',1200);
+    } catch {
+      appendOutput('Clipboard not available.');
+    }
+  });
+
+  // clear button
+  clearBtn.addEventListener('click', ()=>{ out.innerHTML=''; newPrompt(); });
+
+  // click to focus latest input
+  out.addEventListener('click', ()=> {
+    const inputs = out.querySelectorAll('input.cmd');
+    if(inputs.length) inputs[inputs.length-1].focus();
+  });
+
+  // Ctrl+L clears screen
+  document.addEventListener('keydown', e=>{
+    if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='l'){
+      e.preventDefault();
+      out.innerHTML=''; newPrompt();
+    }
+  });
+})();
+</script>
+</body>
+</html>
