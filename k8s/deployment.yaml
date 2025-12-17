@@ -28,18 +28,18 @@ spec:
         - name: git-sync
           image: registry.k8s.io/git-sync/git-sync:v4.0.0
           env:
-            - name: GITSYNC_REPO
+            - name: GIT_SYNC_REPO
               value: "https://github.com/zakcole08/zakcole08.github.io"
-            - name: GITSYNC_BRANCH
+            - name: GIT_SYNC_BRANCH
               value: "main"
-            - name: GITSYNC_ROOT
-              value: "/git"
-            - name: GITSYNC_DEST
+            - name: GIT_SYNC_ROOT
+              value: "/web"
+            - name: GIT_SYNC_DEST
               value: "."
-            - name: GITSYNC_ONE_TIME
+            - name: GIT_SYNC_ONE_TIME
               value: "true"
-            - name: GITSYNC_WAIT
+            - name: GIT_SYNC_WAIT
               value: "30"
           volumeMounts:
             - name: web-content
-              mountPath: /git
+              mountPath: /web
