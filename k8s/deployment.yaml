@@ -33,13 +33,15 @@ spec:
             - name: GITSYNC_BRANCH
               value: "main"
             - name: GITSYNC_ROOT
-              value: "/web"
+              value: "/tmp/git"          # internal path inside container
             - name: GITSYNC_DEST
-              value: "."
+              value: "."                 # write directly into the shared volume
             - name: GITSYNC_ONE_TIME
-              value: "true"
+              value: "true"              # clone once
             - name: GITSYNC_WAIT
               value: "30"
+            - name: GITSYNC_PERMISSIONS
+              value: "0777"              # make files readable by nginx
           volumeMounts:
             - name: web-content
-              mountPath: /web
+              mountPath: /tmp/git
