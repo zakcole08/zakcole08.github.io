@@ -42,4 +42,4 @@ spec:
               value: "false"
           volumeMounts:
             - name: web-content
-              mountPath: /git
+              mountPath: /usr/share/nginx/html
