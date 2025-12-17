@@ -15,8 +15,7 @@ spec:
       volumes:
         - name: web-content
           emptyDir: {}
-
-        initContainers:
+      initContainers:
         - name: git-sync-init
           image: registry.k8s.io/git-sync/git-sync:v4.2.0
           env:
@@ -33,14 +32,15 @@ spec:
           volumeMounts:
             - name: web-content
               mountPath: /git
-
       containers:
         - name: nginx
           image: nginx:alpine
+          ports:
+            - containerPort: 80
           volumeMounts:
             - name: web-content
               mountPath: /usr/share/nginx/html
-        
+              subPath: current
         - name: git-sync
           image: registry.k8s.io/git-sync/git-sync:v4.2.0
           env:
@@ -55,29 +55,3 @@ spec:
           volumeMounts:
             - name: web-content
               mountPath: /git
-
-      containers:
-        - name: nginx
-          image: nginx:alpine
-          ports:
-            - containerPort: 80
-          volumeMounts:
-            - name: web-content
-              mountPath: /usr/share/nginx/html
-        
-        - name: git-sync
-          image: registry.k8s.io/git-sync/git-sync:v4.2.0
-          env:
-            - name: GIT_SYNC_REPO
-              value: "https://github.com/zakcole08/zakcole08.github.io"
-            - name: GIT_SYNC_BRANCH
-              value: "main"
-            - name: GIT_SYNC_ROOT
-              value: "/tmp/git"
-            - name: GIT_SYNC_DEST
-              value: "current"
-            - name: GIT_SYNC_ONE_TIME
-              value: "false"
-          volumeMounts:
-            - name: web-content
-              mountPath: /tmp/git
