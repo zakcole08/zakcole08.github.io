@@ -24,6 +24,7 @@ spec:
           volumeMounts:
             - name: web-content
               mountPath: /usr/share/nginx/html
+              subPath: site
 
         - name: git-sync
           image: registry.k8s.io/git-sync/git-sync:v4.0.0
@@ -35,15 +36,13 @@ spec:
             - name: GITSYNC_ROOT
               value: "/tmp/git"
             - name: GITSYNC_DEST
-              value: "."
+              value: "site"
             - name: GITSYNC_ONE_TIME
               value: "true"
             - name: GITSYNC_WAIT
               value: "30"
             - name: GITSYNC_PERMISSIONS
               value: "0777"
-            - name: GITSYNC_ENABLE_WORKTREES
-              value: "false"
           volumeMounts:
             - name: web-content
               mountPath: /tmp/git
