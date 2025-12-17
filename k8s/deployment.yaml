@@ -1,4 +1,22 @@
-initContainers:
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zaks-site
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zaks-site
+  template:
+    metadata:
+      labels:
+        app: zaks-site
+    spec:
+      volumes:
+        - name: web-content
+          emptyDir: {}
+
+        initContainers:
         - name: git-sync-init
           image: registry.k8s.io/git-sync/git-sync:v4.2.0
           env:
@@ -7,14 +25,14 @@ initContainers:
             - name: GITSYNC_REF
               value: "main"
             - name: GITSYNC_ROOT
-              value: "/git" # Match the mountPath below
+              value: "/git"
             - name: GITSYNC_LINK
               value: "current"
             - name: GITSYNC_ONE_TIME
               value: "true"
           volumeMounts:
             - name: web-content
-              mountPath: /git # This MUST match GITSYNC_ROOT
+              mountPath: /git
 
       containers:
         - name: nginx
@@ -37,3 +55,29 @@ initContainers:
           volumeMounts:
             - name: web-content
               mountPath: /git
+
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: web-content
+              mountPath: /usr/share/nginx/html
+        
+        - name: git-sync
+          image: registry.k8s.io/git-sync/git-sync:v4.2.0
+          env:
+            - name: GIT_SYNC_REPO
+              value: "https://github.com/zakcole08/zakcole08.github.io"
+            - name: GIT_SYNC_BRANCH
+              value: "main"
+            - name: GIT_SYNC_ROOT
+              value: "/tmp/git"
+            - name: GIT_SYNC_DEST
+              value: "current"
+            - name: GIT_SYNC_ONE_TIME
+              value: "false"
+          volumeMounts:
+            - name: web-content
+              mountPath: /tmp/git
