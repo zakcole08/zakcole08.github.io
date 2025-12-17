@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: zaks-site
+spec:
+  selector:
+    app: zaks-site
+  ports:
+    - port: 80
+      targetPort: 80
+  type: NodePort
+  
