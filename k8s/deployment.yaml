@@ -23,26 +23,27 @@ spec:
             - containerPort: 80
           volumeMounts:
             - name: web-content
+              # We mount the "site" sub-folder created by git-sync
               mountPath: /usr/share/nginx/html
+              # Pointing directly to the destination folder inside the volume
               subPath: site
 
         - name: git-sync
           image: registry.k8s.io/git-sync/git-sync:v4.0.0
           env:
-            - name: GITSYNC_REPO
+            - name: GIT_SYNC_REPO
               value: "https://github.com/zakcole08/zakcole08.github.io"
-            - name: GITSYNC_BRANCH
+            - name: GIT_SYNC_BRANCH
               value: "main"
-            - name: GITSYNC_ROOT
+            - name: GIT_SYNC_ROOT
               value: "/tmp/git"
-            - name: GITSYNC_DEST
+            - name: GIT_SYNC_DEST
               value: "site"
-            - name: GITSYNC_ONE_TIME
-              value: "true"
-            - name: GITSYNC_WAIT
+            # Set to false so it keeps syncing changes from GitHub
+            - name: GIT_SYNC_ONE_TIME
+              value: "false"
+            - name: GIT_SYNC_WAIT
               value: "30"
-            - name: GITSYNC_PERMISSIONS
-              value: "0777"
           volumeMounts:
             - name: web-content
               mountPath: /tmp/git
